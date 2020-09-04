@@ -8,16 +8,26 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 )
 
 const (
-	token = ""
+	token = "1381993359:AAFFtO_qc_Pz0pMgqHbShTYYVIlUT12xlVc"
 )
 
 var (
 	updates = make(chan Updates)
 	offset  int
 )
+
+func checkIfCommand(entities []MessageEntity) bool {
+	for _, entity := range entities {
+		if entity.Type == "bot_command" {
+			return true
+		}
+	}
+	return false
+}
 
 func doRequestToAPI(method string, values *url.Values) (io.ReadCloser, error) {
 	resp, err := http.PostForm(
@@ -45,9 +55,18 @@ func processingUpdates() {
 	for {
 		newUpdates := <-updates
 		for _, update := range newUpdates.Result {
-			err := sendMessage(update.Message.Chat.ID, update.Message.Text)
-			if err != nil {
-				log.Println(err)
+			if checkIfCommand(update.Message.Entities) {
+				if strings.Contains(update.Message.Text, "/start") {
+					err := sendMessage(update.Message.Chat.ID, "Hello! I can send anime wallpaper")
+					if err != nil {
+						log.Println(err)
+					}
+				} else if strings.Contains(update.Message.Text, "/getpic") {
+					err := sendMessage(update.Message.Chat.ID, "Sorry:( not implemented")
+					if err != nil {
+						fmt.Println(err)
+					}
+				}
 			}
 		}
 	}
