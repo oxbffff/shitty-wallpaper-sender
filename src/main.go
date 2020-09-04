@@ -34,7 +34,7 @@ func doRequestToAPI(method string, values *url.Values) (io.ReadCloser, error) {
 func sendMessage(chatID int, text string) error {
 	body, err := doRequestToAPI("sendMessage", &url.Values{"chat_id": {strconv.Itoa(chatID)}, "text": {text}})
 	if err != nil {
-		log.Println(err.Error())
+		log.Println(err)
 		return err
 	}
 	defer body.Close()
@@ -44,13 +44,11 @@ func sendMessage(chatID int, text string) error {
 
 func processingUpdates() {
 	for {
-		select {
-		case newUpdates := <-updates:
-			for _, update := range newUpdates.Result {
-				err := sendMessage(update.Message.Chat.ID, update.Message.Text)
-				if err != nil {
-					log.Println(err.Error())
-				}
+		newUpdates := <-updates
+		for _, update := range newUpdates.Result {
+			err := sendMessage(update.Message.Chat.ID, update.Message.Text)
+			if err != nil {
+				log.Println(err)
 			}
 		}
 	}
@@ -60,7 +58,7 @@ func getUpdates() {
 	for {
 		body, err := doRequestToAPI("getUpdates", &url.Values{"offset": {strconv.Itoa(offset)}, "timeout": {"30"}})
 		if err != nil {
-			log.Println(err.Error())
+			log.Println(err)
 			continue
 		}
 		defer body.Close()
@@ -68,7 +66,7 @@ func getUpdates() {
 		var newUpdates Updates
 		err = json.NewDecoder(body).Decode(&newUpdates)
 		if err != nil {
-			log.Println(err.Error())
+			log.Println(err)
 			continue
 		}
 
