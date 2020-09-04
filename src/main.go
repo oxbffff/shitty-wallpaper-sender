@@ -34,7 +34,6 @@ func doRequestToAPI(method string, values *url.Values) (io.ReadCloser, error) {
 func sendMessage(chatID int, text string) error {
 	body, err := doRequestToAPI("sendMessage", &url.Values{"chat_id": {strconv.Itoa(chatID)}, "text": {text}})
 	if err != nil {
-		log.Println(err)
 		return err
 	}
 	defer body.Close()
