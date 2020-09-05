@@ -1,14 +1,20 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -20,12 +26,40 @@ var (
 	offset  int
 )
 
+func getPhotoURL() (string, error) {
+	resp, err := http.Get(
+		fmt.Sprintf(
+			"https://wall.alphacoders.com/by_category.php?id=3&filter=4K+Ultra+HD&page=%d",
+			rand.Intn(100),
+		),
+	)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	re := regexp.MustCompile("<img(.*)src=\"(https://images.*)\" alt")
+	links := re.FindAllStringSubmatch(string(body), -1)
+	if links == nil {
+		return "", errors.New("no links found")
+	}
+
+	re = regexp.MustCompile("thumb.*-")
+	return re.ReplaceAllString(links[rand.Intn(len(links)-2)+1][2], ""), nil
+}
+
 func checkIfCommand(entities []MessageEntity) bool {
 	for _, entity := range entities {
 		if entity.Type == "bot_command" {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -51,9 +85,34 @@ func sendMessage(chatID int, text string) error {
 	return nil
 }
 
+func sendPhoto(chatID int, photoURL string) error {
+	body, err := doRequestToAPI("sendPhoto", &url.Values{"chat_id": {strconv.Itoa(chatID)}, "photo": {photoURL}})
+	if err != nil {
+		return err
+	}
+	
+	pb, _ := ioutil.ReadAll(body)
+	body.Close()
+
+	var prettyJSON bytes.Buffer
+	err = json.Indent(&prettyJSON, pb, "", "\t")
+	if err != nil {
+		return err
+	}	
+	
+	body, err = doRequestToAPI("sendMessage", &url.Values{"chat_id": {strconv.Itoa(chatID)}, "text": {string(prettyJSON.Bytes())}})
+	if err != nil {
+		return err
+	}
+	defer body.Close()	
+
+	return nil
+}
+
 func processingUpdates() {
 	for {
 		newUpdates := <-updates
+		
 		for _, update := range newUpdates.Result {
 			if checkIfCommand(update.Message.Entities) {
 				if strings.Contains(update.Message.Text, "/start") {
@@ -62,10 +121,16 @@ func processingUpdates() {
 						log.Println(err)
 					}
 				} else if strings.Contains(update.Message.Text, "/getpic") {
-					err := sendMessage(update.Message.Chat.ID, "Sorry:( not implemented")
-					if err != nil {
-						fmt.Println(err)
-					}
+					go func() {
+						photoURL, err := getPhotoURL()
+						if err != nil {
+							log.Println(err)
+						}
+						err = sendPhoto(update.Message.Chat.ID, photoURL)
+						if err != nil {
+							log.Println(err)
+						}
+					}()
 				}
 			}
 		}
@@ -98,6 +163,7 @@ func getUpdates() {
 }
 
 func main() {
+	rand.Seed(time.Now().UTC().UnixNano())
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	go getUpdates()
