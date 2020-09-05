@@ -29,7 +29,7 @@ var (
 func getPhotoURL() (string, error) {
 	resp, err := http.Get(
 		fmt.Sprintf(
-			"https://wall.alphacoders.com/by_category.php?id=3&filter=4K+Ultra+HD&page=%d",
+			"https://wall.alphacoders.com/by_category.php?id=3&filter=HD&page=%d",
 			rand.Intn(100),
 		),
 	)
@@ -51,6 +51,21 @@ func getPhotoURL() (string, error) {
 
 	re = regexp.MustCompile("thumb.*-")
 	return re.ReplaceAllString(links[rand.Intn(len(links)-2)+1][2], ""), nil
+}
+
+func getPrettyJSON(body io.ReadCloser) (string, error) {
+	pb, err := ioutil.ReadAll(body)
+	if err != nil {
+		return "", err
+	}
+
+	var prettyJSON bytes.Buffer
+	err = json.Indent(&prettyJSON, pb, "", "\t")
+	if err != nil {
+		return "", err
+	}
+
+	return string(prettyJSON.Bytes()), nil
 }
 
 func checkIfCommand(entities []MessageEntity) bool {
@@ -80,7 +95,7 @@ func sendMessage(chatID int, text string) error {
 	if err != nil {
 		return err
 	}
-	defer body.Close()
+	body.Close()
 
 	return nil
 }
@@ -90,21 +105,17 @@ func sendPhoto(chatID int, photoURL string) error {
 	if err != nil {
 		return err
 	}
-	
-	pb, _ := ioutil.ReadAll(body)
-	body.Close()
+	defer body.Close()
 
-	var prettyJSON bytes.Buffer
-	err = json.Indent(&prettyJSON, pb, "", "\t")
-	if err != nil {
-		return err
-	}	
-	
-	body, err = doRequestToAPI("sendMessage", &url.Values{"chat_id": {strconv.Itoa(chatID)}, "text": {string(prettyJSON.Bytes())}})
+	prettyJSON, err := getPrettyJSON(body)
 	if err != nil {
 		return err
 	}
-	defer body.Close()	
+
+	err = sendMessage(chatID, prettyJSON)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -112,7 +123,7 @@ func sendPhoto(chatID int, photoURL string) error {
 func processingUpdates() {
 	for {
 		newUpdates := <-updates
-		
+
 		for _, update := range newUpdates.Result {
 			if checkIfCommand(update.Message.Entities) {
 				if strings.Contains(update.Message.Text, "/start") {
