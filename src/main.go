@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	token = "1381993359:AAFFtO_qc_Pz0pMgqHbShTYYVIlUT12xlVc"
+	token = ""
 )
 
 var (
@@ -54,13 +54,13 @@ func getPhotoURL() (string, error) {
 }
 
 func getPrettyJSON(body io.ReadCloser) (string, error) {
-	pb, err := ioutil.ReadAll(body)
+	parsedBody, err := ioutil.ReadAll(body)
 	if err != nil {
 		return "", err
 	}
 
 	var prettyJSON bytes.Buffer
-	err = json.Indent(&prettyJSON, pb, "", "\t")
+	err = json.Indent(&prettyJSON, parsedBody, "", "\t")
 	if err != nil {
 		return "", err
 	}
