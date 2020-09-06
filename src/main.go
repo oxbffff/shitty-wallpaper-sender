@@ -22,7 +22,7 @@ const (
 )
 
 var (
-	updates = make(chan Updates)
+	updatesCh = make(chan Updates)
 	offset  int
 )
 
@@ -122,7 +122,7 @@ func sendPhoto(chatID int, photoURL string) error {
 
 func processingUpdates() {
 	for {
-		newUpdates := <-updates
+		newUpdates := <-updatesCh
 
 		for _, update := range newUpdates.Result {
 			if checkIfCommand(update.Message.Entities) {
@@ -169,7 +169,7 @@ func getUpdates() {
 			offset = newUpdates.Result[updatesCount-1].UpdateID + 1
 		}
 
-		updates <- newUpdates
+		updatesCh <- newUpdates
 	}
 }
 
