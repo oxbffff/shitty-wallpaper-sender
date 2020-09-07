@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -24,6 +25,7 @@ var (
 	updatesCh = make(chan Updates)
 	token     = os.Getenv("TOKENWBOT")
 	offset    int
+	subscribers = make(map[int](chan struct{}))
 )
 
 func sendMessage(chatID int, text string, parseMode string) error {
@@ -43,12 +45,17 @@ func sendMessage(chatID int, text string, parseMode string) error {
 	return nil
 }
 
-func sendPhoto(chatID int, photoURL string) error {
+func sendPhoto(chatID int, by func() (string, error)) error {
+	data, err := by()
+	if err != nil {
+		return err
+	}
+	
 	body, err := doRequestToAPI(
 		"sendPhoto",
 		&url.Values{
 			"chat_id": {strconv.Itoa(chatID)},
-			"photo":   {photoURL},
+			"photo":   {data},
 		},
 	)
 	if err != nil {
@@ -105,11 +112,7 @@ func processingUpdates() {
 					}
 				} else if strings.Contains(update.Message.Text, "/pic") {
 					go func() {
-						photoURL, err := getPhotoURL()
-						if err != nil {
-							log.Println(err)
-						}
-						err = sendPhoto(update.Message.Chat.ID, photoURL)
+						err := sendPhoto(update.Message.Chat.ID, getPhotoURL)
 						if err != nil {
 							log.Println(err)
 						}
@@ -119,7 +122,40 @@ func processingUpdates() {
 					if err != nil {
 						log.Println(err)
 					}
+					
+					if _, ok := subscribers[update.Message.Chat.ID]; ok {
+						continue
+					}
+					
+					subscribers[update.Message.Chat.ID] = make(chan struct{})
+					
+					go func(done <-chan struct{}) {
+						ticker := time.NewTicker(time.Hour)
+						
+						for {
+							select {
+							case <-ticker.C:
+								err = sendPhoto(update.Message.Chat.ID, getPhotoURL)
+								if err != nil {
+									log.Println(err)
+								}
+							case <-done:
+								ticker.Stop()
+								return
+							}
+						}
+					}(subscribers[update.Message.Chat.ID])
 				} else if strings.Contains(update.Message.Text, "/unsub") {
+					if _, ok := subscribers[update.Message.Chat.ID]; !ok {
+						err := sendMessage(update.Message.Chat.ID, "Subscribe first", "")
+						if err != nil {
+							log.Println(err)
+						}
+					}
+					
+					close(subscribers[update.Message.Chat.ID])
+					delete(subscribers, update.Message.Chat.ID)
+					
 					err := sendMessage(update.Message.Chat.ID, "Done", "")
 					if err != nil {
 						log.Println(err)
