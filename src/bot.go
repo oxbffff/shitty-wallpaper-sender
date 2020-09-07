@@ -71,9 +71,7 @@ func getUpdates() {
 }
 
 func processingUpdates() {
-	for {
-		newUpdates := <-updatesCh
-
+	for newUpdates := range updatesCh {
 		for _, update := range newUpdates.Result {
 			if checkIfCommand(update.Message.Entities) {
 				if strings.Contains(update.Message.Text, "/start") {
