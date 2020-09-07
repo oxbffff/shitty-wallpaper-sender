@@ -9,14 +9,32 @@ import (
 	"strings"
 )
 
+const (
+	startMessage = `
+Hello! I can send random anime wallpapers
+Use <code>/pic</code> to get random wallpaper
+Or use <code>/sub</code> to get random wallpaper every hour
+	`
+	subMessage = `
+You subscribed to send photos. Use <code>/unsub</code> to undo
+	`
+)
+
 var (
 	updatesCh = make(chan Updates)
 	token     = os.Getenv("TOKENWBOT")
 	offset    int
 )
 
-func sendMessage(chatID int, text string) error {
-	body, err := doRequestToAPI("sendMessage", &url.Values{"chat_id": {strconv.Itoa(chatID)}, "text": {text}})
+func sendMessage(chatID int, text string, parseMode string) error {
+	body, err := doRequestToAPI(
+		"sendMessage",
+		&url.Values{
+			"chat_id":    {strconv.Itoa(chatID)},
+			"text":       {text},
+			"parse_mode": {parseMode},
+		},
+	)
 	if err != nil {
 		return err
 	}
@@ -26,7 +44,13 @@ func sendMessage(chatID int, text string) error {
 }
 
 func sendPhoto(chatID int, photoURL string) error {
-	body, err := doRequestToAPI("sendPhoto", &url.Values{"chat_id": {strconv.Itoa(chatID)}, "photo": {photoURL}})
+	body, err := doRequestToAPI(
+		"sendPhoto",
+		&url.Values{
+			"chat_id": {strconv.Itoa(chatID)},
+			"photo":   {photoURL},
+		},
+	)
 	if err != nil {
 		return err
 	}
@@ -37,7 +61,7 @@ func sendPhoto(chatID int, photoURL string) error {
 		return err
 	}
 
-	err = sendMessage(chatID, prettyJSON)
+	err = sendMessage(chatID, "<code>" + prettyJSON + "</code>", "HTML")
 	if err != nil {
 		return err
 	}
@@ -75,7 +99,7 @@ func processingUpdates() {
 		for _, update := range newUpdates.Result {
 			if checkIfCommand(update.Message.Entities) {
 				if strings.Contains(update.Message.Text, "/start") {
-					err := sendMessage(update.Message.Chat.ID, "Hello! I can send anime wallpaper")
+					err := sendMessage(update.Message.Chat.ID, startMessage, "HTML")
 					if err != nil {
 						log.Println(err)
 					}
@@ -91,7 +115,12 @@ func processingUpdates() {
 						}
 					}()
 				} else if strings.Contains(update.Message.Text, "/sub") {
-					err := sendMessage(update.Message.Chat.ID, "You subscribed to send photos. Use /unsub to undo")
+					err := sendMessage(update.Message.Chat.ID, subMessage, "HTML")
+					if err != nil {
+						log.Println(err)
+					}
+				} else if strings.Contains(update.Message.Text, "/unsub") {
+					err := sendMessage(update.Message.Chat.ID, "Done", "")
 					if err != nil {
 						log.Println(err)
 					}
