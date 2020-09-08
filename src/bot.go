@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/url"
@@ -55,8 +56,10 @@ func sendPhoto(chatID int, by func() (string, error)) error {
 	body, err := doRequestToAPI(
 		"sendPhoto",
 		&url.Values{
-			"chat_id": {strconv.Itoa(chatID)},
-			"photo":   {data},
+			"chat_id":    {strconv.Itoa(chatID)},
+			"photo":      {data},
+			"caption":    {fmt.Sprintf("<a href=\"%s\">original</a>", data)},
+			"parse_mode": {"HTML"},
 		},
 	)
 	if err != nil {
@@ -80,9 +83,9 @@ func sendPhoto(chatID int, by func() (string, error)) error {
 		if err != nil {
 			return err
 		}
-	
+
 		log.Println(prettyJSON)
-		
+
 		err = sendMessage(chatID, "<code>"+prettyJSON+"</code>", "HTML")
 		if err != nil {
 			return err
