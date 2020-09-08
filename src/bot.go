@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"log"
 	"net/url"
 	"os"
@@ -14,7 +15,7 @@ const (
 	startMessage = `
 Hello! I can send random anime wallpapers
 Use <code>/pic</code> to get random wallpaper
-Or use <code>/sub</code> to get random wallpaper every hour
+Or use <code>/sub</code> to get random wallpaper every 30 minutes
 	`
 	subMessage = `
 You subscribed to send photos. Use <code>/unsub</code> to undo
@@ -22,13 +23,13 @@ You subscribed to send photos. Use <code>/unsub</code> to undo
 )
 
 var (
-	updatesCh = make(chan Updates)
-	token     = os.Getenv("TOKENWBOT")
-	offset    int
+	updatesCh   = make(chan Updates)
+	token       = os.Getenv("TOKENWBOT")
+	offset      int
 	subscribers = make(map[int](chan struct{}))
 )
 
-func sendMessage(chatID int, text string, parseMode string) error {
+func sendMessage(chatID int, text, parseMode string) error {
 	body, err := doRequestToAPI(
 		"sendMessage",
 		&url.Values{
@@ -50,7 +51,7 @@ func sendPhoto(chatID int, by func() (string, error)) error {
 	if err != nil {
 		return err
 	}
-	
+
 	body, err := doRequestToAPI(
 		"sendPhoto",
 		&url.Values{
@@ -63,14 +64,27 @@ func sendPhoto(chatID int, by func() (string, error)) error {
 	}
 	defer body.Close()
 
-	prettyJSON, err := getPrettyJSON(body)
+	parsedBody, err := ioutil.ReadAll(body)
 	if err != nil {
 		return err
 	}
 
-	err = sendMessage(chatID, "<code>" + prettyJSON + "</code>", "HTML")
-	if err != nil {
+	var tgResp map[string]interface{}
+
+	if err = json.Unmarshal(parsedBody, &tgResp); err != nil {
 		return err
+	}
+
+	if tgResp["ok"].(bool) != true {
+		prettyJSON, err := getPrettyJSON(parsedBody)
+		if err != nil {
+			return err
+		}
+
+		err = sendMessage(chatID, "<code>"+prettyJSON+"</code>", "HTML")
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -112,7 +126,7 @@ func processingUpdates() {
 					}
 				} else if strings.Contains(update.Message.Text, "/pic") {
 					go func() {
-						err := sendPhoto(update.Message.Chat.ID, getPhotoURL)
+						err := sendPhoto(update.Message.Chat.ID, getPhotoByURL)
 						if err != nil {
 							log.Println(err)
 						}
@@ -122,20 +136,20 @@ func processingUpdates() {
 					if err != nil {
 						log.Println(err)
 					}
-					
+
 					if _, ok := subscribers[update.Message.Chat.ID]; ok {
 						continue
 					}
-					
+
 					subscribers[update.Message.Chat.ID] = make(chan struct{})
-					
+
 					go func(done <-chan struct{}) {
-						ticker := time.NewTicker(time.Hour)
-						
+						ticker := time.NewTicker(30 * time.Minute)
+
 						for {
 							select {
 							case <-ticker.C:
-								err = sendPhoto(update.Message.Chat.ID, getPhotoURL)
+								err = sendPhoto(update.Message.Chat.ID, getPhotoByURL)
 								if err != nil {
 									log.Println(err)
 								}
@@ -152,10 +166,10 @@ func processingUpdates() {
 							log.Println(err)
 						}
 					}
-					
+
 					close(subscribers[update.Message.Chat.ID])
 					delete(subscribers, update.Message.Chat.ID)
-					
+
 					err := sendMessage(update.Message.Chat.ID, "Done", "")
 					if err != nil {
 						log.Println(err)
@@ -167,7 +181,14 @@ func processingUpdates() {
 }
 
 func main() {
+	f, err := os.OpenFile("./info.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("Error opening file: %v\n", err)
+	}
+	defer f.Close()
+
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	log.SetOutput(f)
 
 	log.Println("TOKEN: " + token)
 

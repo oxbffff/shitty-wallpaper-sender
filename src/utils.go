@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-func getPhotoURL() (string, error) {
+func getPhotoByURL() (string, error) {
 	resp, err := http.Get(
 		fmt.Sprintf(
 			"https://wall.alphacoders.com/by_category.php?id=3&filter=HD&page=%d",
@@ -42,14 +42,9 @@ func getPhotoURL() (string, error) {
 	return re.ReplaceAllString(links[rand.Intn(len(links)-2)+1][2], ""), nil
 }
 
-func getPrettyJSON(body io.ReadCloser) (string, error) {
-	parsedBody, err := ioutil.ReadAll(body)
-	if err != nil {
-		return "", err
-	}
-
+func getPrettyJSON(parsedBody []byte) (string, error) {
 	var prettyJSON bytes.Buffer
-	err = json.Indent(&prettyJSON, parsedBody, "", "\t")
+	err := json.Indent(&prettyJSON, parsedBody, "", "\t")
 	if err != nil {
 		return "", err
 	}
