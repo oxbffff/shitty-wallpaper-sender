@@ -80,7 +80,9 @@ func sendPhoto(chatID int, by func() (string, error)) error {
 		if err != nil {
 			return err
 		}
-
+	
+		log.Println(prettyJSON)
+		
 		err = sendMessage(chatID, "<code>"+prettyJSON+"</code>", "HTML")
 		if err != nil {
 			return err
