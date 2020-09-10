@@ -33,7 +33,7 @@ var (
 func sendMessage(chatID int, text, parseMode string) error {
 	body, err := doRequestToAPI(
 		"sendMessage",
-		&url.Values{
+		url.Values{
 			"chat_id":    {strconv.Itoa(chatID)},
 			"text":       {text},
 			"parse_mode": {parseMode},
@@ -55,7 +55,7 @@ func sendPhoto(chatID int, by func() (string, error)) error {
 
 	body, err := doRequestToAPI(
 		"sendPhoto",
-		&url.Values{
+		url.Values{
 			"chat_id":    {strconv.Itoa(chatID)},
 			"photo":      {data},
 			"caption":    {fmt.Sprintf("<a href=\"%s\">original</a>", data)},
@@ -97,7 +97,7 @@ func sendPhoto(chatID int, by func() (string, error)) error {
 
 func getUpdates() {
 	for {
-		body, err := doRequestToAPI("getUpdates", &url.Values{"offset": {strconv.Itoa(offset)}, "timeout": {"30"}})
+		body, err := doRequestToAPI("getUpdates", url.Values{"offset": {strconv.Itoa(offset)}, "timeout": {"30"}})
 		if err != nil {
 			log.Println(err)
 			continue

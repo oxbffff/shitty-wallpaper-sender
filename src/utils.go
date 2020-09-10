@@ -62,10 +62,10 @@ func checkIfCommand(entities []MessageEntity) bool {
 	return false
 }
 
-func doRequestToAPI(method string, values *url.Values) (io.ReadCloser, error) {
+func doRequestToAPI(method string, values url.Values) (io.ReadCloser, error) {
 	resp, err := http.PostForm(
 		fmt.Sprintf("https://api.telegram.org/bot%s/%s", token, method),
-		*values,
+		values,
 	)
 	if err != nil {
 		return nil, err
