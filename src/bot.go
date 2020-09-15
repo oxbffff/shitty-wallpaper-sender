@@ -97,7 +97,13 @@ func sendPhoto(chatID int, by func() (string, error)) error {
 
 func getUpdates() {
 	for {
-		body, err := doRequestToAPI("getUpdates", url.Values{"offset": {strconv.Itoa(offset)}, "timeout": {"30"}})
+		body, err := doRequestToAPI(
+			"getUpdates",
+			url.Values{
+				"offset":  {strconv.Itoa(offset)},
+				"timeout": {"30"},
+			},
+		)
 		if err != nil {
 			log.Println(err)
 			continue
@@ -170,6 +176,7 @@ func processingUpdates() {
 						if err != nil {
 							log.Println(err)
 						}
+						continue
 					}
 
 					close(subscribers[update.Message.Chat.ID])

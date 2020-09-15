@@ -36,14 +36,15 @@ func getPhotoByURL() (string, error) {
 	if links == nil {
 		return "", errors.New("no links found")
 	}
-	
+
 	re = regexp.MustCompile("thumb.*-")
-	
+
 	return re.ReplaceAllString(links[rand.Intn(len(links)-2)+1][2], ""), nil
 }
 
 func getPrettyJSON(parsedBody []byte) (string, error) {
 	var prettyJSON bytes.Buffer
+
 	err := json.Indent(&prettyJSON, parsedBody, "", "\t")
 	if err != nil {
 		return "", err
