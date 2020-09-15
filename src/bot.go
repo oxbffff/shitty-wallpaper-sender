@@ -143,12 +143,13 @@ func processingUpdates() {
 						}
 					}()
 				} else if strings.Contains(update.Message.Text, "/sub") {
+					if _, ok := subscribers[update.Message.Chat.ID]; ok {
+						continue
+					}
+
 					err := sendMessage(update.Message.Chat.ID, subMessage, "HTML")
 					if err != nil {
 						log.Println(err)
-					}
-
-					if _, ok := subscribers[update.Message.Chat.ID]; ok {
 						continue
 					}
 
