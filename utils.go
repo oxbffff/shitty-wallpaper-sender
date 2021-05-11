@@ -14,8 +14,6 @@ import (
 	"time"
 )
 
-const userAgent = "Mozilla/5.0 (X11; Linux i686; rv:86.0) Gecko/20100101 Firefox/86.0"
-
 func getPhotoByURL() (string, error) {
 	client := &http.Client{}
 
@@ -31,7 +29,10 @@ func getPhotoByURL() (string, error) {
 		return "", err
 	}
 
-	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set(
+		"User-Agent",
+		"Mozilla/5.0 (X11; Linux i686; rv:86.0) Gecko/20100101 Firefox/86.0",
+	)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -63,7 +64,7 @@ func getPrettyJSON(parsedBody []byte) (string, error) {
 		return "", err
 	}
 
-	return string(prettyJSON.Bytes()), nil
+	return prettyJSON.String(), nil
 }
 
 func checkIfCommand(entities []MessageEntity) bool {

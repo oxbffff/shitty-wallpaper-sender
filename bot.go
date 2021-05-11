@@ -11,12 +11,12 @@ import (
 
 const (
 	startMessage = `
-Hello! I can send random anime wallpapers
+Hello! I can send random anime wallpaper
 Use <code>/pic</code> to get random wallpaper
 Or use <code>/sub</code> to get random wallpaper every 30 minutes
 	`
 	subMessage = `
-You subscribed to send photos. Use <code>/unsub</code> to undo
+You have subscribed to the newsletter of photos. Use <code>/unsub</code> to undo
 	`
 )
 
@@ -114,5 +114,6 @@ func init() {
 
 func main() {
 	go getUpdates()
+
 	processingUpdates()
 }
